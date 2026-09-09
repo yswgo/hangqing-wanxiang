@@ -92,6 +92,7 @@ jobs:
           echo "READY_RESPONSE=$(curl -fsS "$gateway_url/ready")"
           echo "CN_QUOTE_RESPONSE=$(curl -fsS "$gateway_url/test/domestic?code=300750")"
           echo "CN_INTRADAY_RESPONSE=$(curl -fsS "$gateway_url/history?code=300750&period=1d")"
+          echo "STOCKTODAY_MINUTES_DIAGNOSTIC=$(curl -fsS "$gateway_url/test/stocktoday-mins?code=300750")"
       - name: Verify Worker configuration
         run: |
           echo "Deployment completed."
