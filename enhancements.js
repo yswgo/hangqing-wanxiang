@@ -1,68 +1,14 @@
-// V49 detail experience: period switching, deterministic mock chart, richer stats and related assets.
+// V50: trading-oriented stock detail inspired by dense market apps, while keeping our own visual language.
 (function(){
-  const periodShapes={
-    '1日':[108,96,101,83,88,74,66,71,54,48,39],
-    '1周':[112,103,107,91,96,82,73,78,61,49,43],
-    '1月':[118,110,98,103,92,78,82,66,58,47,35],
-    '1年':[126,118,113,104,98,90,79,70,62,48,34]
-  };
-  function seedFor(x){return [...(x.code||x.name)].reduce((a,c)=>a+c.charCodeAt(0),0)}
-  function chartPoints(x,period){
-    const base=periodShapes[period]||periodShapes['1周'];
-    const seed=seedFor(x);
-    const rising=x.chg>=0;
-    return base.map((y,i)=>{
-      const wiggle=((seed+i*13)%9)-4;
-      const yy=rising?y+wiggle:150-(y+wiggle);
-      return `${i*36},${Math.max(12,Math.min(138,yy))}`;
-    }).join(' ')
-  }
-  function fmtPct(v){return `${v>=0?'+':''}${v.toFixed(2)}%`}
-  function numericPrice(x){const n=parseFloat(String(x.price).replace(/,/g,'').replace('%',''));return Number.isFinite(n)?n:0}
-  function relatedAssets(x){
-    let list=assets.filter(a=>a.name!==x.name && a.type===x.type);
-    if(x.type==='股票') list=list.filter(a=>a.region===x.region).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg));
-    else if(x.type==='商品') list=list.filter(a=>a.group===x.group);
-    else if(x.type==='指数') list=list.filter(a=>a.region===x.region || x.region==='全球');
-    else list=list.filter(a=>a.region===x.region || a.region==='全球');
-    return list.slice(0,4)
-  }
-  function makeDetail(x){
-    const p=numericPrice(x), abs=Math.abs(x.chg)/100;
-    const open=p*(1-(x.chg/100)*.35), prev=p/(1+x.chg/100||1), high=p*(1+abs*.55+.002), low=p*(1-abs*.45-.002);
-    const priceFmt=v=> String(x.price).includes('%')?`${v.toFixed(2)}%`:v.toLocaleString('zh-CN',{maximumFractionDigits:2});
-    const related=relatedAssets(x);
-    return `<div class="detail-card detail-pro">
-      <div class="detail-price-row"><div><div class="detail-price">${x.price}</div><div class="detail-change ${x.chg>=0?'up':'down'}">${fmtPct(x.chg)}</div></div><span class="detail-status">${x.status}</span></div>
-      <div class="periods" id="detailPeriods">${['1日','1周','1月','1年'].map(p=>`<button data-period="${p}" class="${p==='1周'?'active':''}">${p}</button>`).join('')}</div>
-      <div class="chart-wrap"><svg class="chart ${x.chg>=0?'up':'down'}" id="detailChart" viewBox="0 0 360 150" preserveAspectRatio="none"><polyline id="detailLine" points="${chartPoints(x,'1周')}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="chart-caption">模拟走势 · 仅用于界面预览</div></div>
-      <div class="stats stats-six"><div><small>今开</small><b>${priceFmt(open)}</b></div><div><small>昨收</small><b>${priceFmt(prev)}</b></div><div><small>最高</small><b>${priceFmt(high)}</b></div><div><small>最低</small><b>${priceFmt(low)}</b></div><div><small>市场</small><b>${x.region}</b></div><div><small>分类</small><b>${x.group||x.type}</b></div></div>
-      ${x.type==='股票'?`<div class="info-strip"><span>${x.tag}</span><span>${x.group}</span><span>${x.code}</span></div>`:''}
-    </div>
-    ${related.length?`<div class="detail-related"><div class="section-head"><b>相关资产</b><span>${related.length} 项</span></div><div class="list">${rows(related)}</div></div>`:''}`
-  }
-  const originalOpenDetail=openDetail;
-  openDetail=function(name){
-    const x=assets.find(a=>a.name===name);
-    if(!x){originalOpenDetail(name);return}
-    el('detailTitle').textContent=x.name;
-    el('detailCode').textContent=`${x.code} · ${x.region}`;
-    const card=el('detailSheet').querySelector('.detail-card');
-    if(card){
-      const parent=card.parentElement;
-      parent.querySelectorAll('.detail-card,.detail-related').forEach(n=>n.remove());
-      parent.insertAdjacentHTML('beforeend',makeDetail(x));
-    }
-    let old=document.getElementById('favBtn');if(old)old.remove();
-    const btn=document.createElement('button');btn.id='favBtn';btn.className='fav-btn';btn.textContent=favs.has(name)?'★ 已自选':'☆ 加自选';
-    btn.onclick=()=>{favs.has(name)?favs.delete(name):favs.add(name);saveFavs();btn.textContent=favs.has(name)?'★ 已自选':'☆ 加自选'};
-    el('detailSheet').querySelector('.sheet-header').appendChild(btn);
-    el('detailSheet').classList.remove('hidden');
-    document.querySelectorAll('#detailPeriods button').forEach(b=>b.onclick=()=>{
-      document.querySelectorAll('#detailPeriods button').forEach(z=>z.classList.remove('active'));
-      b.classList.add('active');
-      const line=document.getElementById('detailLine');if(line)line.setAttribute('points',chartPoints(x,b.dataset.period));
-    });
-    document.querySelectorAll('.detail-related .row[data-name]').forEach(r=>r.onclick=()=>openDetail(r.dataset.name));
-  };
+ const shapes={'分时':[98,92,101,82,87,70,76,58,64,45,50,38],'日K':[112,98,103,91,78,85,67,71,52,60,42,35],'周K':[118,109,96,101,88,76,82,64,57,48,39,33],'月K':[125,116,108,96,101,86,75,68,59,47,40,30]};
+ function seed(x){return [...(x.code||x.name)].reduce((a,c)=>a+c.charCodeAt(0),0)}
+ function points(x,p){const s=seed(x),up=x.chg>=0;return (shapes[p]||shapes['分时']).map((y,i)=>{let q=y+((s+i*11)%9)-4;q=up?q:150-q;return `${i*(360/11)},${Math.max(12,Math.min(138,q))}`}).join(' ')}
+ function num(x){return parseFloat(String(x.price).replace(/,/g,'').replace('%',''))||0}function pct(v){return `${v>=0?'+':''}${v.toFixed(2)}%`}
+ function related(x){return assets.filter(a=>a.name!==x.name&&a.type===x.type&&(x.type!=='股票'||a.region===x.region)).slice(0,4)}
+ function stockStats(x){const p=num(x),r=Math.abs(x.chg)/100,prev=p/(1+x.chg/100||1);return {open:p*(1-x.chg/300),high:p*(1+r*.55+.002),low:p*(1-r*.45-.002),prev,volume:x.region==='中国'?'38.6亿':'1.24亿',turn:x.region==='中国'?'2.94%':'1.83%',cap:x.region==='中国'?'1.82万亿':'4.07万亿',pe:x.region==='中国'?'24.6':'38.9'}}
+ function f(v){return v.toLocaleString('zh-CN',{maximumFractionDigits:2})}
+ function depth(x){const p=num(x),step=Math.max(p*.001,0.01);let out='';for(let i=5;i>=1;i--)out+=`<div><span>卖${i}</span><b class="down">${f(p+i*step)}</b><em>${(18+i*7)}万</em></div>`;for(let i=1;i<=5;i++)out+=`<div><span>买${i}</span><b class="up">${f(p-i*step)}</b><em>${(25+i*9)}万</em></div>`;return out}
+ function stockDetail(x){const s=stockStats(x),rel=related(x);return `<div class="trade-detail"><div class="quote-block"><div class="quote-main"><div class="detail-price ${x.chg>=0?'up':'down'}">${x.price}</div><div class="quote-delta ${x.chg>=0?'up':'down'}">${pct(x.chg)} <span>${x.status}</span></div></div><div class="quote-stats"><div><span>高</span><b>${f(s.high)}</b></div><div><span>低</span><b>${f(s.low)}</b></div><div><span>开</span><b>${f(s.open)}</b></div><div><span>昨收</span><b>${f(s.prev)}</b></div><div><span>市值</span><b>${s.cap}</b></div><div><span>换手</span><b>${s.turn}</b></div><div><span>成交额</span><b>${s.volume}</b></div><div><span>市盈率</span><b>${s.pe}</b></div></div></div><div class="mock-inline">模拟行情 · 当前用于界面与交互预览</div><div class="trade-tabs" id="tradePeriods">${['分时','日K','周K','月K'].map((p,i)=>`<button data-period="${p}" class="${i===0?'active':''}">${p}</button>`).join('')}<button>更多⌄</button></div><div class="market-board"><div class="main-chart"><div class="chart-head"><span>均价 ${x.price}</span><b class="${x.chg>=0?'up':'down'}">最新 ${x.price}　${pct(x.chg)}</b></div><svg class="trade-chart ${x.chg>=0?'up':'down'}" viewBox="0 0 360 150" preserveAspectRatio="none"><line x1="0" y1="75" x2="360" y2="75" class="midline"/><polyline id="tradeLine" points="${points(x,'分时')}" fill="none" stroke="currentColor" stroke-width="2.5"/></svg><div class="time-axis"><span>09:30</span><span>11:30</span><span>15:00</span></div><div class="volume-bars">${[34,18,24,12,29,16,38,22,31,15,27,20,35,14,25,19,32,17].map(h=>`<i style="height:${h}px"></i>`).join('')}</div></div><aside class="depth"><div class="depth-title">盘口</div>${depth(x)}</aside></div><div class="stock-subtabs"><button class="active">盘口</button><button>资金</button><button>资讯</button><button>简况</button></div><div class="stock-info"><div><small>所属市场</small><b>${x.region}</b></div><div><small>股票代码</small><b>${x.code}</b></div><div><small>分类</small><b>${x.tag}</b></div><div><small>状态</small><b>${x.status}</b></div></div>${rel.length?`<div class="detail-related"><div class="section-head"><b>同市场个股</b><span>${rel.length} 项</span></div><div class="list">${rows(rel)}</div></div>`:''}</div>`}
+ function normalDetail(x){const rel=related(x);return `<div class="detail-card detail-pro"><div class="detail-price-row"><div><div class="detail-price">${x.price}</div><div class="detail-change ${x.chg>=0?'up':'down'}">${pct(x.chg)}</div></div><span class="detail-status">${x.status}</span></div><div class="periods" id="detailPeriods">${['1日','1周','1月','1年'].map((p,i)=>`<button data-period="${p}" class="${i===1?'active':''}">${p}</button>`).join('')}</div><div class="chart-wrap"><svg class="chart ${x.chg>=0?'up':'down'}" viewBox="0 0 360 150"><polyline points="${points(x,'周K')}" fill="none" stroke="currentColor" stroke-width="3"/></svg><div class="chart-caption">模拟走势 · 仅用于界面预览</div></div></div>${rel.length?`<div class="detail-related"><div class="section-head"><b>相关资产</b></div><div class="list">${rows(rel)}</div></div>`:''}`}
+ openDetail=function(name){const x=assets.find(a=>a.name===name);if(!x)return;el('detailTitle').textContent=x.name;el('detailCode').textContent=`${x.code} · ${x.region}`;const sheet=el('detailSheet'),body=sheet.querySelector('.detail-card')?.parentElement||sheet;body.querySelectorAll('.detail-card,.detail-related,.trade-detail').forEach(n=>n.remove());body.insertAdjacentHTML('beforeend',x.type==='股票'?stockDetail(x):normalDetail(x));let old=document.getElementById('favBtn');if(old)old.remove();const btn=document.createElement('button');btn.id='favBtn';btn.className='fav-btn';btn.textContent=favs.has(name)?'★':'☆';btn.onclick=()=>{favs.has(name)?favs.delete(name):favs.add(name);saveFavs();btn.textContent=favs.has(name)?'★':'☆'};sheet.querySelector('.sheet-header').appendChild(btn);sheet.classList.remove('hidden');document.querySelectorAll('#tradePeriods [data-period]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#tradePeriods button').forEach(z=>z.classList.remove('active'));b.classList.add('active');document.getElementById('tradeLine')?.setAttribute('points',points(x,b.dataset.period))});document.querySelectorAll('.detail-related .row[data-name]').forEach(r=>r.onclick=()=>openDetail(r.dataset.name))};
 })();
