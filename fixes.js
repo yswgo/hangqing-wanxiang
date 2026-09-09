@@ -1,6 +1,7 @@
-// V4.5 interaction fixes: keep type/region/rank state consistent.
+// Interaction rules: keep type/region/rank state consistent.
 const regionOptionsByType={
   '指数':['全球','美股','日本','韩国','中国','欧洲'],
+  '股票':['全球','美股','日本','韩国','中国','欧洲'],
   '板块':['全球','美股','日本','韩国','中国','欧洲'],
   '概念':['全球','美股','日本','韩国','中国','欧洲'],
   '商品':['全球'],
@@ -8,9 +9,10 @@ const regionOptionsByType={
   '债券':['美股']
 };
 const rankOptionsByType={
+  '指数':['涨幅榜','跌幅榜','自选'],
+  '股票':['涨幅榜','跌幅榜','自选'],
   '板块':['涨幅榜','跌幅榜'],
   '概念':['涨幅榜','跌幅榜'],
-  '指数':['涨幅榜','跌幅榜','自选'],
   '商品':['涨幅榜','跌幅榜','自选'],
   '外汇':['涨幅榜','跌幅榜','自选'],
   '债券':['涨幅榜','跌幅榜','自选']
@@ -42,7 +44,6 @@ renderTabs=function(){
 const baseRenderAll=renderAll;
 renderAll=function(){
   baseRenderAll();
-  // Show a title that actually matches the active filters for ordinary assets.
   if(state.page==='行情' && state.type!=='板块' && state.type!=='概念'){
     const head=document.querySelector('#content .section-head b');
     if(head){
@@ -52,6 +53,4 @@ renderAll=function(){
     }
   }
 };
-
-// Re-render once so the fixes take effect immediately after app.js initialises.
 renderAll();
