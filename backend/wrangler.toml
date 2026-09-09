@@ -4,11 +4,14 @@ compatibility_date = "2026-09-01"
 workers_dev = true
 
 [vars]
-# 正式环境建议改成你自己的 Pages 域名；API Key 不要写在这里。
 ALLOW_ORIGIN = "https://yswgo.github.io"
+# V74 默认启用 Webull 官方共享 Sandbox，仅用于 AAPL 开发测试。
+WEBULL_SANDBOX_ENABLED = "true"
 
-# Secret 请使用 wrangler secret put 或 GitHub Actions Secrets：
+# Secrets（不要写入此文件）：
 # ALPHA_VANTAGE_API_KEY
-# 可选：CN_PROVIDER_URL / CN_PROVIDER_TOKEN
-# 可选：HK_PROVIDER_URL / HK_PROVIDER_TOKEN
-# 可选：CALENDAR_URL 或 CALENDAR_JSON
+# TWELVE_DATA_API_KEY（可选）
+# WEBULL_SANDBOX_APP_KEY / WEBULL_SANDBOX_APP_SECRET（可选；覆盖官方共享测试凭证）
+# CN_PROVIDER_URL / CN_PROVIDER_TOKEN（可选）
+# HK_PROVIDER_URL / HK_PROVIDER_TOKEN（可选）
+# CALENDAR_URL 或 CALENDAR_JSON（可选）
