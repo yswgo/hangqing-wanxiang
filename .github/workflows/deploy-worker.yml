@@ -2,12 +2,6 @@ name: Deploy Market Gateway
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/cloudflare-worker.js'
-      - 'backend/wrangler.toml'
-      - '.github/workflows/deploy-worker.yml'
 
 jobs:
   deploy:
@@ -24,12 +18,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo "Missing CLOUDFLARE_ACCOUNT_ID" && exit 1)
+          test -n "$ALPHA_VANTAGE_API_KEY" || (echo "Missing ALPHA_VANTAGE_API_KEY" && exit 1)
       - name: Install Wrangler
         run: npm install --global wrangler@4
       - name: Configure Alpha Vantage secret
-        if: ${{ env.ALPHA_VANTAGE_API_KEY != '' }}
         run: printf '%s' "$ALPHA_VANTAGE_API_KEY" | wrangler secret put ALPHA_VANTAGE_API_KEY
       - name: Deploy Worker
         run: wrangler deploy
       - name: Verify Worker configuration
-        run: echo "Worker deployment completed. Open /health and /ready on the deployed workers.dev URL to verify provider readiness."
+        run: echo "Deployment completed. Verify /health, /ready, /quotes?codes=NVDA and /history?code=NVDA&period=1d on the deployed workers.dev URL."
