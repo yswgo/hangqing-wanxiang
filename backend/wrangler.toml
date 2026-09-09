@@ -1,17 +1,17 @@
 name = "hangqing-wanxiang-gateway"
-main = "cloudflare-worker-v77.js"
+main = "cloudflare-worker-v82.js"
 compatibility_date = "2026-09-01"
 workers_dev = true
 
 [vars]
 ALLOW_ORIGIN = "https://yswgo.github.io"
-# V74 core 仍保留 Webull 官方共享 Sandbox，仅用于 AAPL 开发测试。
+# V82 继续使用 V74 core 仍保留 Webull 官方共享 Sandbox，仅用于 AAPL 开发测试。
 WEBULL_SANDBOX_ENABLED = "true"
 
 # Secrets（不要写入此文件）：
 # ALPHA_VANTAGE_API_KEY
 # TWELVE_DATA_API_KEY（可选）
-# WEBULL_APP_KEY / WEBULL_APP_SECRET / WEBULL_ACCESS_TOKEN（正式 Webull HK/CN 路由）
+# WEBULL_APP_KEY / WEBULL_APP_SECRET / WEBULL_ACCESS_TOKEN（正式 Webull US/HK/CN 路由）
 # WEBULL_SANDBOX_APP_KEY / WEBULL_SANDBOX_APP_SECRET（可选；覆盖官方共享测试凭证）
 # CN_PROVIDER_URL / CN_PROVIDER_TOKEN（可选，Webull 失败后的 A股 fallback）
 # HK_PROVIDER_URL / HK_PROVIDER_TOKEN（可选，Webull 失败后的港股 fallback）
