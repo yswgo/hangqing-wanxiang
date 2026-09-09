@@ -14,6 +14,9 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+      WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
+      WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
+      WEBULL_ACCESS_TOKEN: ${{ secrets.WEBULL_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,9 +39,22 @@ jobs:
             printf '%s' "$TWELVE_DATA_API_KEY" | wrangler secret put TWELVE_DATA_API_KEY
             echo "Twelve Data provider enabled."
           else
-            echo "TWELVE_DATA_API_KEY not set; Alpha Vantage remains the US provider."
+            echo "TWELVE_DATA_API_KEY not set; Alpha Vantage remains the US fallback."
+          fi
+      - name: Configure Webull production credentials when present
+        shell: bash
+        run: |
+          if [ -n "$WEBULL_APP_KEY" ] && [ -n "$WEBULL_APP_SECRET" ]; then
+            printf '%s' "$WEBULL_APP_KEY" | wrangler secret put WEBULL_APP_KEY
+            printf '%s' "$WEBULL_APP_SECRET" | wrangler secret put WEBULL_APP_SECRET
+            if [ -n "$WEBULL_ACCESS_TOKEN" ]; then
+              printf '%s' "$WEBULL_ACCESS_TOKEN" | wrangler secret put WEBULL_ACCESS_TOKEN
+            fi
+            echo "Webull production provider credentials configured server-side."
+          else
+            echo "Webull production credentials not set; HK/CN production routing remains disabled."
           fi
       - name: Deploy Worker
         run: wrangler deploy
       - name: Verify Worker configuration
-        run: echo "Deployment completed. Verify /health, /ready, /quotes?codes=NVDA and /history?code=NVDA&period=1d on the deployed workers.dev URL."
+        run: echo "Deployment completed. Verify /health, /ready, /quotes?codes=AAPL and provider diagnostics on the deployed workers.dev URL."
