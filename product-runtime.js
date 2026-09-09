@@ -3,8 +3,8 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
-const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v80';
-const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v79';
+const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v84';
+const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v84';
 const QUOTE_STALE=2*60e3, QUOTE_EXPIRE=30*60e3, HIST_TTL=6*60*60e3, REFRESH_MS=30000;
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}, write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -117,5 +117,5 @@ document.addEventListener('marketdata:updated',()=>setTimeout(()=>{paintQuoteInt
 document.addEventListener('marketdata:updated',e=>{const t=document.querySelector('[data-refresh-time]');if(t)t.textContent=`最近刷新 ${new Date(e.detail.at).toLocaleTimeString('zh-CN')}`});
 window.addEventListener('online',()=>document.body.classList.remove('offline'));window.addEventListener('offline',()=>document.body.classList.add('offline'));
 setInterval(()=>{if(document.visibilityState==='visible'&&state.page==='首页')MarketDataService.refresh().catch(()=>{})},REFRESH_MS);
-document.addEventListener('DOMContentLoaded',()=>{bindSearch();setTimeout(openFromUrl,80)});setTimeout(()=>{R.run();openFromUrl()},100);
+document.addEventListener('DOMContentLoaded',()=>{bindSearch();setTimeout(openFromUrl,80)});setTimeout(()=>{R.run();openFromUrl()},100);setTimeout(()=>{GatewayCapabilityService.refresh().then(()=>{R.run();const code=new URL(location.href).searchParams.get('asset'),x=assets.find(a=>a.code===code);if(x&&!$('detailSheet')?.classList.contains('hidden'))R.runDetail(x)}).catch(()=>{})},250);
 })();
