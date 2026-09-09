@@ -1,27 +1,66 @@
-# 行情万象后端行情网关 V64
+# 行情万象后端行情网关 V68
 
-V64 在 V63 的“按市场路由”基础上增加了三类生产化能力：**边缘缓存、统一交易日历接口、上游请求控制**。美股仍由 Alpha Vantage 提供报价与日K/周K/月K；A股、港股仍通过独立服务端 Provider 预留，不会在未配置时伪装成真实数据。
+V68 在现有“按市场路由 + 边缘缓存 + 历史行情 + 交易日历”基础上，把报价结构正式升级为 **Quote Schema v2**。核心目标是统一不同数据供应商字段，避免前端继续把 `chg` 同时当“涨跌额”和“涨跌幅”使用。
 
 ## 接口
 
-- `GET /health`：网关版本、Provider 能力、缓存 TTL、日历能力。
+- `GET /health`：网关版本、Provider 能力、缓存 TTL、日历能力、Schema 版本。
 - `GET /quotes?codes=NVDA,AAPL`：统一批量报价，单次最多 5 个代码。
 - `GET /history?code=NVDA&period=1d|1w|1m`：统一历史行情。
 - `GET /calendar?market=US`：统一交易节假日日历入口。
 
-## V64 缓存策略
+## Quote Schema v2
 
-Cloudflare Worker 使用 `caches.default` 做边缘缓存，减少上游 API 压力：
+报价标准字段：
+
+```json
+{
+  "schemaVersion": 2,
+  "code": "NVDA",
+  "name": "NVDA",
+  "price": "123.45",
+  "change": 1.52,
+  "chgPct": 1.25,
+  "chg": 1.25,
+  "currency": "USD",
+  "status": "按数据源",
+  "provider": "alpha_vantage",
+  "source": "alpha_vantage",
+  "market": "US",
+  "delayed": null,
+  "delayMinutes": null,
+  "isMock": false,
+  "timestamp": 1780000000000
+}
+```
+
+其中：
+
+- `price`：最新可用价格。
+- `change`：绝对涨跌额。
+- `chgPct`：涨跌幅百分比。
+- `chg`：兼容旧前端，值等于 `chgPct`，后续新代码不应再依赖它作为正式字段。
+- `currency`：USD / CNY / HKD 等。
+- `delayed`：`true` / `false` / `null`。`null` 表示网关无法仅凭接口判断授权属性。
+- `delayMinutes`：已知延迟分钟数；未知为 `null`。
+- `source`：真实上游来源或内部 Provider 标识。
+- `timestamp`：该条报价的时间戳。
+
+前端 V68 会自动兼容老 Provider：如果只返回 `chg`，会自动映射到 `chgPct`。
+
+## 缓存策略
+
+Cloudflare Worker 使用 `caches.default` 做边缘缓存：
 
 - 报价：20 秒。
 - 历史行情：6 小时。
 - 交易日历：12 小时。
 
-缓存只用于降低上游请求频率，不改变数据授权属性。前端仍会根据 Provider 返回值标识“模拟 / 缓存 / 按数据源”。
+缓存仅减少上游请求压力，不代表“实时授权”。前端会分别展示缓存状态和 Provider 的延迟/实时属性。
 
-## 交易日历格式
+## 交易日历
 
-可通过 `CALENDAR_JSON` 或 `CALENDAR_URL` 提供日历。推荐 JSON：
+可通过 `CALENDAR_JSON` 或 `CALENDAR_URL` 提供：
 
 ```json
 {
@@ -36,19 +75,7 @@ Cloudflare Worker 使用 `caches.default` 做边缘缓存，减少上游 API 压
 }
 ```
 
-也兼容顶层市场键，例如 `{ "US": [...] }`。`/calendar?market=US` 返回：
-
-```json
-{
-  "market":"US",
-  "dates":["2026-01-01"],
-  "source":"external_url",
-  "timestamp":1780000000000,
-  "meta":{"count":1,"cacheTtlSeconds":43200}
-}
-```
-
-注意：只有你把 `CALENDAR_URL` 指向可信交易所/数据供应商日历，前端才应把它视为可信节假日数据；模板本身不自带“官方日历”。
+只有当日历来自可信交易所或数据供应商时，前端才应把它作为正式节假日判断依据。
 
 ## 环境变量
 
@@ -56,12 +83,12 @@ Cloudflare Worker 使用 `caches.default` 做边缘缓存，减少上游 API 压
 - `ALLOW_ORIGIN`：建议正式环境设为 `https://yswgo.github.io`。
 - `CN_PROVIDER_URL` / `CN_PROVIDER_TOKEN`：A股 Provider 预留。
 - `HK_PROVIDER_URL` / `HK_PROVIDER_TOKEN`：港股 Provider 预留。
-- `CALENDAR_URL`：可选，返回交易节假日 JSON 的服务端地址。
-- `CALENDAR_JSON`：可选，小规模静态节假日 JSON；和 `CALENDAR_URL` 二选一即可。
+- `CALENDAR_URL`：可选，交易节假日 JSON 地址。
+- `CALENDAR_JSON`：可选，静态节假日 JSON。
 
 所有 Token/API Key 必须保存在 Worker Secret/环境变量中，不能放进网页源码或 localStorage。
 
-## 当前真实能力
+## 当前能力
 
 | 市场 | 报价 | 历史K线 | 日历 | Provider |
 | --- | --- | --- | --- | --- |
