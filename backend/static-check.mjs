@@ -23,6 +23,10 @@ for (const secret of ['WEBULL_APP_KEY','WEBULL_APP_SECRET','WEBULL_ACCESS_TOKEN'
 if (!worker.includes('isMock:false') || !worker.includes('isSandbox:false')) fail('production quote trust flags missing');
 if (!worker.includes('delayed:null')) fail('unknown entitlement freshness must remain explicit');
 if (!worker.includes('_staleCache=true')) fail('stale real cache fallback missing');
+if (!core.includes("https://stocktoday.cn/api/tools")) fail('StockToday official endpoint missing');
+if (!core.includes("call('stk_mins'")) fail('StockToday minute-series adapter missing');
+if (!core.includes("provider:'stocktoday_rt_min'")) fail('StockToday minute provider missing');
+
 if (/Mock/i.test(worker.replace(/isMock/g,''))) fail('V82 production wrapper must not manufacture Mock data');
 
 console.log('Backend V82 static regression checks passed.');
