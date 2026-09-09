@@ -91,3 +91,8 @@ CN: Webull production/适用区域(配置后) → CN external provider(可选) �
 ```
 
 在 Webull 正式凭证尚未配置前，HK/CN 不允许静默回退成未标记 Mock。
+
+
+## Tushare A股 Provider
+
+配置 `TUSHARE_TOKEN` 后，Gateway 会优先使用 Tushare 的 `rt_k` 实时日线接口；A股代码会自动补全为 `.SH/.SZ/.BJ`。历史行情 `/history?code=600519&period=1d|1w|1m` 使用 Tushare 对应的 daily/weekly/monthly 接口。该 Provider 需要 Tushare 账户及相应数据权限，未配置或权限不足时会返回明确错误，不会生成 Mock 行情。
