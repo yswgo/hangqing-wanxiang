@@ -85,6 +85,13 @@ jobs:
         run: node --check cloudflare-worker.js && node --check cloudflare-worker-v82.js
       - name: Deploy Worker
         run: wrangler deploy
+      - name: Verify live Worker responses
+        shell: bash
+        run: |
+          gateway_url="https://hangqing-wanxiang-gateway.settle9820.workers.dev"
+          echo "READY_RESPONSE=$(curl -fsS "$gateway_url/ready")"
+          echo "CN_QUOTE_RESPONSE=$(curl -fsS "$gateway_url/test/domestic?code=300750")"
+          echo "CN_INTRADAY_RESPONSE=$(curl -fsS "$gateway_url/history?code=300750&period=1d")"
       - name: Verify Worker configuration
         run: |
           echo "Deployment completed."
