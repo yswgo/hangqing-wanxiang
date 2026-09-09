@@ -24,6 +24,7 @@ jobs:
       ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
       TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+      STOCKTODAY_TOKEN: ${{ secrets.STOCKTODAY_TOKEN }}
       WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
       WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
       WEBULL_ACCESS_TOKEN: ${{ secrets.WEBULL_ACCESS_TOKEN }}
@@ -50,6 +51,15 @@ jobs:
             echo "Twelve Data provider enabled."
           else
             echo "TWELVE_DATA_API_KEY not set; Alpha Vantage remains the US fallback."
+          fi
+      - name: Configure StockToday secret when present
+        shell: bash
+        run: |
+          if [ -n "$STOCKTODAY_TOKEN" ]; then
+            printf '%s' "$STOCKTODAY_TOKEN" | wrangler secret put STOCKTODAY_TOKEN
+            echo "StockToday A-share provider enabled."
+          else
+            echo "STOCKTODAY_TOKEN not set; Tushare remains the CN fallback."
           fi
       - name: Configure Tushare secret when present
         shell: bash
