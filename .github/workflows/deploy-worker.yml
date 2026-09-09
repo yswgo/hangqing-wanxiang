@@ -15,17 +15,21 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+      - name: Configure Alpha Vantage secret
+        if: ${{ env.ALPHA_VANTAGE_API_KEY != '' }}
+        run: printf '%s' "$ALPHA_VANTAGE_API_KEY" | wrangler secret put ALPHA_VANTAGE_API_KEY
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: backend
-          command: deploy
-        env:
-          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+        run: wrangler deploy
+      - name: Verify Worker configuration
+        run: echo "Worker deployment completed. Open /health and /ready on the deployed workers.dev URL to verify provider readiness."
