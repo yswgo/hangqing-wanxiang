@@ -1,7 +1,9 @@
-// 行情万象 · Unified Product Runtime V80
+// 行情万象 · Unified Product Runtime V81
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
+if(window.__HW_PRODUCT_RUNTIME_V81__)return;
+window.__HW_PRODUCT_RUNTIME_V81__=true;
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
 const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v79';
 const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v79';
@@ -13,7 +15,7 @@ const pct=v=>`${v>=0?'+':''}${Number(v||0).toFixed(2)}%`, endpoint=()=>String(lo
 
 // ---------- Runtime ----------
 const R=window.ProductRuntime||{}, renderHooks=[], detailHooks=[];
-R.version=80; R.afterRender=fn=>{if(typeof fn==='function'&&!renderHooks.includes(fn))renderHooks.push(fn)}; R.afterDetail=fn=>{if(typeof fn==='function'&&!detailHooks.includes(fn))detailHooks.push(fn)};
+R.version=81; R.afterRender=fn=>{if(typeof fn==='function'&&!renderHooks.includes(fn))renderHooks.push(fn)}; R.afterDetail=fn=>{if(typeof fn==='function'&&!detailHooks.includes(fn))detailHooks.push(fn)};
 R.run=()=>renderHooks.slice().forEach(fn=>{try{fn()}catch(e){console.warn('runtime render hook',e)}}); R.runDetail=x=>detailHooks.slice().forEach(fn=>{try{fn(x)}catch(e){console.warn('runtime detail hook',e)}});
 R.renderHookCount=()=>renderHooks.length; R.detailHookCount=()=>detailHooks.length; window.ProductRuntime=R;
 window.MarketRequestCoordinator={pending:new Map(),run(key,producer){if(this.pending.has(key))return this.pending.get(key);const p=Promise.resolve().then(producer).finally(()=>this.pending.delete(key));this.pending.set(key,p);return p}};
