@@ -13,6 +13,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+      TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,6 +29,15 @@ jobs:
         run: npm install --global wrangler@4
       - name: Configure Alpha Vantage secret
         run: printf '%s' "$ALPHA_VANTAGE_API_KEY" | wrangler secret put ALPHA_VANTAGE_API_KEY
+      - name: Configure Twelve Data secret when present
+        shell: bash
+        run: |
+          if [ -n "$TWELVE_DATA_API_KEY" ]; then
+            printf '%s' "$TWELVE_DATA_API_KEY" | wrangler secret put TWELVE_DATA_API_KEY
+            echo "Twelve Data provider enabled."
+          else
+            echo "TWELVE_DATA_API_KEY not set; Alpha Vantage remains the US provider."
+          fi
       - name: Deploy Worker
         run: wrangler deploy
       - name: Verify Worker configuration
