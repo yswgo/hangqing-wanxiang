@@ -2,6 +2,15 @@ name: Deploy Market Gateway
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-worker.yml'
+
+concurrency:
+  group: market-gateway-production
+  cancel-in-progress: true
 
 jobs:
   deploy:
