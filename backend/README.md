@@ -1,98 +1,93 @@
-# 行情万象后端行情网关 V71
+# 行情万象后端行情网关 V77
 
-V71 的目标是把“可接真实行情”推进到“可部署、可验证、可长期运行”的状态。当前首批真实链路仍以 **美股 → Alpha Vantage → Cloudflare Worker → 行情万象前端** 为主，A股和港股继续保留独立 Provider 路由。
+当前架构：GitHub Pages → Cloudflare Worker → 多 Provider。Webull Sandbox 已用 AAPL 验证完整链路；Sandbox 只用于开发测试，不代表正式行情权限。
 
-## 接口
+## 已验证
 
-- `GET /health`：网关版本、Schema、Provider 能力、缓存和日历状态。
-- `GET /ready`：快速判断当前是否至少有一个真实 Provider 已配置。
-- `GET /quotes?codes=NVDA,AAPL`：统一批量报价，单次最多 5 个代码。
-- `GET /history?code=NVDA&period=1d|1w|1m`：日/周/月历史行情。
-- `GET /calendar?market=US`：交易节假日日历。
+- `GET /ready`：Gateway 健康与能力。
+- `GET /test/webull`：Webull Sandbox AAPL 测试。
+- `GET /quotes?codes=...`：Quote Schema v2 批量报价。
+- 美股：Webull Sandbox(AAPL 测试) → Twelve Data（可选）→ Alpha Vantage → 最近真实缓存 → 暂不可用。
+- 前端严格区分正式行情、时效未声明、延迟、缓存、Sandbox、Mock、暂不可用。
+
+## Webull 正式行情接入方向
+
+Webull OpenAPI Market Data API 官方支持美股、港股，以及沪深港通范围内的中国 A 股。HTTP Data API 可查询 snapshot、历史 K 线、逐笔和盘口；正式 API Base URL 为 `https://api.webull.hk`。股票类别分别为：
+
+- `US_STOCK`：美股
+- `HK_STOCK`：港股，例如腾讯应使用 Webull API 对应的港股 symbol 格式。
+- `CN_STOCK`：A 股（Stock Connect），例如 `600519`。
+
+正式 Provider 不在浏览器保存密钥。部署工作流已经预留以下 GitHub Actions Secrets，并在存在时安全写入 Cloudflare Worker Secret：
+
+- `WEBULL_APP_KEY`
+- `WEBULL_APP_SECRET`
+- `WEBULL_ACCESS_TOKEN`（需要时）
+
+**不要把这些值写入仓库、网页、截图或聊天。**
+
+Webull OpenAPI 行情订阅与 Webull App/桌面端行情权限相互独立。正式使用前必须确认 OpenAPI 对应市场的数据权限和公开展示/再分发许可。
+
+## 权限注意
+
+根据 Webull OpenAPI 官方说明：
+
+- 港股股票/ETF LV1 可用；LV2 需单独订阅。
+- A 股通过 Stock Connect 提供 LV1；中国大陆以外地区为 15 分钟延迟，中国大陆地区目前不支持该 A 股 OpenAPI 行情能力。
+- 美股 OpenAPI 行情需要相应 OpenAPI 市场数据权限。
+- App/QT 已购买的行情不自动继承到 OpenAPI。
+
+因此网关必须保留 `delayed` / `delayMinutes` / `isSandbox` 等字段，不能把“接口返回成功”等同于“实时行情”。
 
 ## Quote Schema v2
-
-正式字段：
 
 ```json
 {
   "schemaVersion": 2,
-  "code": "NVDA",
-  "name": "NVDA",
+  "code": "AAPL",
   "price": "123.45",
   "change": 1.52,
   "chgPct": 1.25,
-  "chg": 1.25,
   "currency": "USD",
-  "provider": "alpha_vantage",
-  "source": "alpha_vantage",
+  "provider": "webull",
+  "source": "webull",
   "market": "US",
   "delayed": null,
   "delayMinutes": null,
-  "quoteTime": null,
+  "isMock": false,
+  "isSandbox": false,
+  "quoteTime": "2026-09-08T20:00:00.000Z",
   "quoteDate": "2026-09-08",
   "fetchedAt": 1780000000000,
-  "timestamp": 1780000000000,
-  "isMock": false
+  "timestamp": 1780000000000
 }
 ```
 
-`quoteTime` 只有上游真实提供时间时才填写；不会用 Worker 请求时间伪造成成交时间。`fetchedAt` 是网关抓取/生成响应的时间。`timestamp` 暂时保留用于前端兼容。Alpha Vantage `GLOBAL_QUOTE` 的实时/延迟属性取决于具体授权，因此 `delayed` 无法确认时返回 `null`，前端应显示“按数据源授权”，不要直接写“实时”。
-
-## V71 修复
-
-V71 修复了市场代码误分类：`.T`、`.KS`、`.DE`、`.AS`、`.PA` 会先识别为日本/韩国/欧洲，不再被后端误判为美股。美股符号允许普通代码以及类似 `BRK.B` 的单字符类股后缀。
-
-## 缓存策略
-
-Cloudflare Worker 使用 `caches.default`：报价 20 秒、历史行情 6 小时、交易日历 12 小时。缓存只用于减轻上游 API 压力，不改变数据授权和延迟属性。
+`quoteTime` 是上游行情时间；`fetchedAt` 是网关获取时间，两者不能混用。
 
 ## Cloudflare 部署
 
-仓库已经包含 `backend/wrangler.toml` 和 `.github/workflows/deploy-worker.yml`。自动部署需要 GitHub Actions Secrets：
+必需 GitHub Actions Secrets：
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 - `ALPHA_VANTAGE_API_KEY`
 
-部署工作流会先把 `ALPHA_VANTAGE_API_KEY` 写入 Worker Secret，再执行 `wrangler deploy`。API Key 不会进入 GitHub Pages 或浏览器 localStorage。
+可选：
 
-也可以本地部署：
+- `TWELVE_DATA_API_KEY`
+- `WEBULL_APP_KEY`
+- `WEBULL_APP_SECRET`
+- `WEBULL_ACCESS_TOKEN`
 
-```bash
-cd backend
-npm install -g wrangler@4
-wrangler login
-wrangler secret put ALPHA_VANTAGE_API_KEY
-wrangler deploy
-```
+工作流不会把这些 Secret 写进 GitHub Pages。
 
-部署成功后，依次验证：
+## 下一阶段 Provider 路由
 
 ```text
-https://<your-worker>.workers.dev/health
-https://<your-worker>.workers.dev/ready
-https://<your-worker>.workers.dev/quotes?codes=NVDA
-https://<your-worker>.workers.dev/history?code=NVDA&period=1d
+US: Webull production(配置后) → Twelve Data → Alpha Vantage → real cache → unavailable
+HK: Webull production(配置后) → HK external provider(可选) → real cache → unavailable
+CN: Webull production/适用区域(配置后) → CN external provider(可选) → real cache → unavailable
 ```
 
-然后把 Worker 地址填入网页“数据 → 行情数据源”，检测 `/health`，测试 NVDA，再切换到 HTTP Proxy。
-
-## 可选环境变量
-
-- `ALLOW_ORIGIN`：正式环境建议 `https://yswgo.github.io`。
-- `CN_PROVIDER_URL` / `CN_PROVIDER_TOKEN`：A股 Provider。
-- `HK_PROVIDER_URL` / `HK_PROVIDER_TOKEN`：港股 Provider。
-- `CALENDAR_URL` 或 `CALENDAR_JSON`：交易节假日数据。
-
-## 当前真实能力
-
-| 市场 | 报价 | 历史K线 | Provider |
-| --- | --- | --- | --- |
-| 美股 | 可部署 | 日K / 周K / 月K | Alpha Vantage |
-| A股 | 路由已预留 | 待接 | 外部 CN Provider |
-| 港股 | 路由已预留 | 待接 | 外部 HK Provider |
-| 日本 / 韩国 / 欧洲 | 待接 | 待接 | — |
-| 指数 / 商品 / 外汇 / 债券 | 待接 | 待接 | — |
-
-默认前端仍使用 Mock。只有 Worker 实际部署、Secret 配置完成，并在前端切换到 HTTP Proxy 后，才会尝试真实 Provider 数据。
+在 Webull 正式凭证尚未配置前，HK/CN 不允许静默回退成未标记 Mock。
