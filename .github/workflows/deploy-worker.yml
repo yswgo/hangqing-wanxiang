@@ -23,6 +23,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+      TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
       WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
       WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
       WEBULL_ACCESS_TOKEN: ${{ secrets.WEBULL_ACCESS_TOKEN }}
@@ -49,6 +50,15 @@ jobs:
             echo "Twelve Data provider enabled."
           else
             echo "TWELVE_DATA_API_KEY not set; Alpha Vantage remains the US fallback."
+          fi
+      - name: Configure Tushare secret when present
+        shell: bash
+        run: |
+          if [ -n "$TUSHARE_TOKEN" ]; then
+            printf '%s' "$TUSHARE_TOKEN" | wrangler secret put TUSHARE_TOKEN
+            echo "Tushare A-share provider enabled."
+          else
+            echo "TUSHARE_TOKEN not set; CN provider fallback remains optional."
           fi
       - name: Configure Webull production credentials when present
         shell: bash
