@@ -1,0 +1,14 @@
+name = "hangqing-wanxiang-gateway"
+main = "cloudflare-worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[vars]
+# 正式环境建议改成你自己的 Pages 域名；API Key 不要写在这里。
+ALLOW_ORIGIN = "https://yswgo.github.io"
+
+# Secret 请使用 wrangler secret put 或 GitHub Actions Secrets：
+# ALPHA_VANTAGE_API_KEY
+# 可选：CN_PROVIDER_URL / CN_PROVIDER_TOKEN
+# 可选：HK_PROVIDER_URL / HK_PROVIDER_TOKEN
+# 可选：CALENDAR_URL 或 CALENDAR_JSON
