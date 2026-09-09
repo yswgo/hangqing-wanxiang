@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f8">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+<title>行情万象</title>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div>
+    <h1 id="pageTitle">首页</h1>
+    <div class="subtitle" id="pageSubtitle">全球市场 · 一屏看懂涨跌</div>
+  </div>
+  <button class="icon-btn" id="searchBtn" aria-label="搜索">⌕</button>
+</header>
+<section id="marketControls" class="hidden-control"><div class="scroller" id="typeTabs"></div><div class="scroller compact" id="regionTabs"></div><div class="rank-tabs" id="rankTabs"></div></section>
+<main id="content"></main><nav class="bottom-nav" id="bottomNav"></nav></div>
+<div class="sheet hidden" id="detailSheet"><div class="sheet-header"><button class="back-btn" id="backBtn">‹</button><div><div class="detail-title" id="detailTitle"></div><div class="muted" id="detailCode"></div></div></div><div class="detail-card"><div class="detail-price" id="detailPrice"></div><div id="detailChange"></div><div class="periods"><button>1日</button><button class="active">1周</button><button>1月</button><button>1年</button></div><svg class="chart" viewBox="0 0 360 150" preserveAspectRatio="none"><polyline points="0,110 35,100 70,112 105,82 140,88 175,61 210,68 245,40 280,52 315,22 360,35" fill="none" stroke="currentColor" stroke-width="3"/></svg><div class="stats"><div><small>今开</small><b id="statOpen">—</b></div><div><small>昨收</small><b id="statPrev">—</b></div><div><small>最高</small><b id="statHigh">—</b></div><div><small>最低</small><b id="statLow">—</b></div></div></div></div>
+<div class="search-panel hidden" id="searchPanel"><div class="search-head"><button class="back-btn" id="searchBack">‹</button><input id="searchInput" placeholder="搜索黄金、铜、日经、DXY…" autocomplete="off"></div><div id="searchResults" class="search-results"></div></div>
+<script src="app.js"></script></body></html>
