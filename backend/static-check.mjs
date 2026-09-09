@@ -25,7 +25,9 @@ if (!worker.includes('delayed:null')) fail('unknown entitlement freshness must r
 if (!worker.includes('_staleCache=true')) fail('stale real cache fallback missing');
 if (!core.includes("https://stocktoday.cn/api/tools")) fail('StockToday official endpoint missing');
 if (!core.includes("call('stk_mins'")) fail('StockToday minute-series adapter missing');
-if (!core.includes("provider:'stocktoday_rt_min'")) fail('StockToday minute provider missing');
+if (!core.includes("provider='stocktoday_rt_min'") || !core.includes("provider='stocktoday_stk_mins'")) {
+  fail('StockToday minute provider labels missing');
+}
 
 if (/Mock/i.test(worker.replace(/isMock/g,''))) fail('V82 production wrapper must not manufacture Mock data');
 
