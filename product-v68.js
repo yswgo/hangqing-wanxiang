@@ -1,0 +1,17 @@
+// V68: Quote Schema v2 normalization + richer source/delay metadata, using unified ProductRuntime hooks.
+(function(){
+ function num(v){const n=Number(String(v??'').replace('%',''));return Number.isFinite(n)?n:null}
+ function normalize(q){if(!q||!q.code)return q;const pct=num(q.chgPct??q.chg)??0;return {...q,schemaVersion:q.schemaVersion||2,price:q.price==null?'—':String(q.price),change:num(q.change),chgPct:pct,chg:pct,currency:q.currency||null,delayed:typeof q.delayed==='boolean'?q.delayed:null,delayMinutes:num(q.delayMinutes),source:q.source||q.provider||'unknown',timestamp:Number(q.timestamp)||Date.now()}}
+ window.QuoteSchema={version:2,fields:['code','name','price','change','chgPct','currency','delayed','delayMinutes','timestamp','source'],normalize};
+ if(window.MarketProviderContract){MarketProviderContract.version=2;MarketProviderContract.quoteShape=[...QuoteSchema.fields,'provider','isMock'];}
+ if(window.MarketDataService){
+  const a=MarketDataService.adapters?.proxy;if(a&&typeof a.batch==='function'&&!a.__v68){const raw=a.batch.bind(a);a.batch=async codes=>(await raw(codes)).map(normalize);a.__v68=true}
+  const oldQuote=MarketDataService.quote?.bind(MarketDataService);if(oldQuote&&!MarketDataService.__quoteV68){MarketDataService.quote=async code=>normalize(await oldQuote(code));MarketDataService.__quoteV68=true}
+ }
+ function delayText(x){if(x?._fromCache)return'缓存';if(x?.isMock)return'模拟';if(x?.delayed===false)return'实时授权';if(x?.delayed===true)return x.delayMinutes!=null?`延迟 ${x.delayMinutes} 分钟`:'延迟行情';return'按数据源授权'}
+ function meta(x){return `<div class="v68-quote-meta"><div><small>币种</small><b>${x.currency||'—'}</b></div><div><small>涨跌额</small><b>${x.change==null?'—':`${x.change>=0?'+':''}${x.change}`}</b></div><div><small>涨跌幅</small><b class="${x.chgPct>=0?'up':'down'}">${x.chgPct>=0?'+':''}${Number(x.chgPct||0).toFixed(2)}%</b></div><div><small>数据属性</small><b>${delayText(x)}</b></div></div>`}
+ function installMeta(x){if(x?.type!=='股票')return;const trade=document.querySelector('.trade-detail');if(!trade)return;trade.querySelector('.v68-quote-meta')?.remove();const live=trade.querySelector('.v67-live');if(live)live.insertAdjacentHTML('afterend',meta(normalize(x)))}
+ function patchLive(x){if(x?.type!=='股票')return;const trade=document.querySelector('.trade-detail'),box=trade?.querySelector('.v67-live');if(!box)return;const msg=box.querySelector('[data-v67-msg]'),n=normalize(x);if(msg)msg.textContent=n._fromCache?'当前显示最近一次缓存行情。':n.isMock?'当前为 Mock 模拟数据。':`${delayText(n)} · ${n.source||n.provider||'Provider'}`}
+ function schemaCard(){if(state.page!=='数据')return;const c=el('content');if(!c||c.querySelector('.v68-schema'))return;const cap=GatewayCapabilityService?.cached?.(),v=cap?.schemaVersion||'—';c.insertAdjacentHTML('beforeend',`<div class="v68-schema"><div class="section-head"><b>行情字段标准</b><span>Quote Schema v2</span></div><div class="v68-schema-grid"><div><small>前端标准</small><b>v2</b></div><div><small>网关声明</small><b>${v}</b></div><div><small>兼容字段</small><b>chg → chgPct</b></div><div><small>授权标识</small><b>delayed / delayMinutes</b></div></div><code>price · change · chgPct · currency · delayed · delayMinutes · timestamp · source</code><small>旧 Provider 只返回 chg 时仍可正常显示；V68 会自动映射为 chgPct。</small></div>`)}
+ if(window.ProductRuntime){ProductRuntime.afterDetail?.(installMeta);ProductRuntime.afterDetail?.(patchLive);ProductRuntime.afterRender(schemaCard);setTimeout(()=>ProductRuntime.run(),0)}
+})();
