@@ -1,4 +1,4 @@
-// 行情万象 · Unified Product Runtime V79
+// 行情万象 · Unified Product Runtime V80
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
@@ -13,7 +13,7 @@ const pct=v=>`${v>=0?'+':''}${Number(v||0).toFixed(2)}%`, endpoint=()=>String(lo
 
 // ---------- Runtime ----------
 const R=window.ProductRuntime||{}, renderHooks=[], detailHooks=[];
-R.version=79; R.afterRender=fn=>{if(typeof fn==='function'&&!renderHooks.includes(fn))renderHooks.push(fn)}; R.afterDetail=fn=>{if(typeof fn==='function'&&!detailHooks.includes(fn))detailHooks.push(fn)};
+R.version=80; R.afterRender=fn=>{if(typeof fn==='function'&&!renderHooks.includes(fn))renderHooks.push(fn)}; R.afterDetail=fn=>{if(typeof fn==='function'&&!detailHooks.includes(fn))detailHooks.push(fn)};
 R.run=()=>renderHooks.slice().forEach(fn=>{try{fn()}catch(e){console.warn('runtime render hook',e)}}); R.runDetail=x=>detailHooks.slice().forEach(fn=>{try{fn(x)}catch(e){console.warn('runtime detail hook',e)}});
 R.renderHookCount=()=>renderHooks.length; R.detailHookCount=()=>detailHooks.length; window.ProductRuntime=R;
 window.MarketRequestCoordinator={pending:new Map(),run(key,producer){if(this.pending.has(key))return this.pending.get(key);const p=Promise.resolve().then(producer).finally(()=>this.pending.delete(key));this.pending.set(key,p);return p}};
