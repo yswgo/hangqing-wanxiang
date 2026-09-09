@@ -44,17 +44,20 @@ jobs:
       - name: Configure Webull production credentials when present
         shell: bash
         run: |
-          if [ -n "$WEBULL_APP_KEY" ] && [ -n "$WEBULL_APP_SECRET" ]; then
+          if [ -n "$WEBULL_APP_KEY" ] && [ -n "$WEBULL_APP_SECRET" ] && [ -n "$WEBULL_ACCESS_TOKEN" ]; then
             printf '%s' "$WEBULL_APP_KEY" | wrangler secret put WEBULL_APP_KEY
             printf '%s' "$WEBULL_APP_SECRET" | wrangler secret put WEBULL_APP_SECRET
-            if [ -n "$WEBULL_ACCESS_TOKEN" ]; then
-              printf '%s' "$WEBULL_ACCESS_TOKEN" | wrangler secret put WEBULL_ACCESS_TOKEN
-            fi
-            echo "Webull production provider credentials configured server-side."
+            printf '%s' "$WEBULL_ACCESS_TOKEN" | wrangler secret put WEBULL_ACCESS_TOKEN
+            echo "Webull production HK/CN provider enabled."
           else
-            echo "Webull production credentials not set; HK/CN production routing remains disabled."
+            echo "Webull production credentials incomplete; HK/CN production routing stays disabled."
           fi
       - name: Deploy Worker
         run: wrangler deploy
       - name: Verify Worker configuration
-        run: echo "Deployment completed. Verify /health, /ready, /quotes?codes=AAPL and provider diagnostics on the deployed workers.dev URL."
+        run: |
+          echo "Deployment completed."
+          echo "Check /ready and /health."
+          echo "Sandbox test: /test/webull"
+          echo "Production Webull test after credentials are configured: /test/webull-prod?code=0700.HK or /test/webull-prod?code=600519"
+          echo "Unified quotes: /quotes?codes=0700.HK,600519,AAPL"
