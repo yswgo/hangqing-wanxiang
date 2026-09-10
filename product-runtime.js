@@ -1,12 +1,12 @@
-// 行情万象 · Unified Product Runtime V93
+// 行情万象 · Unified Product Runtime V94
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
-if(window.__HW_PRODUCT_RUNTIME_V93__)return;
-window.__HW_PRODUCT_RUNTIME_V93__=true;
+if(window.__HW_PRODUCT_RUNTIME_V94__)return;
+window.__HW_PRODUCT_RUNTIME_V94__=true;
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
-const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v93';
-const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v93';
+const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v94';
+const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v94';
 const QUOTE_STALE=2*60e3, QUOTE_EXPIRE=30*60e3, HIST_TTL=6*60*60e3, REFRESH_MS=30000;
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}, write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -135,13 +135,20 @@ function installAutoDetailData(x){
       svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/><path d="'+escAttr(area)+'" class="intraday-area"/><path d="'+escAttr(line)+'" class="intraday-price"/><path d="'+escAttr(avgLine)+'" class="intraday-average"/>';
       let footer=trade.querySelector('.hw-chart-footer');if(!footer){footer=document.createElement('div');footer.className='hw-chart-footer';svg.parentElement.appendChild(footer)}const totalVol=pts.reduce((s,p)=>s+(+p.v||0),0);footer.textContent=`成交量: ${(totalVol/10000).toFixed(2)}万手　盘后: —`;
       let rc=trade.querySelector('.hw-chart-right');if(!rc){rc=document.createElement('div');rc.className='hw-chart-right';svg.parentElement.appendChild(rc)}const rp=v=>((v/base-1)*100),mid=(high+low)/2;rc.innerHTML=`<span>${rp(high).toFixed(2)}%</span><span>${rp(high-(high-mid)/2).toFixed(2)}%</span><span>${rp(mid).toFixed(2)}%</span><span>${rp(low+(mid-low)/2).toFixed(2)}%</span><span>${rp(low).toFixed(2)}%</span>`;
-    }else svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/>'+pts.map((p,i)=>{const up=+p.c>=+p.o,cx=px(i),w=Math.max(2,360/pts.length*.58),top=y(Math.max(+p.o,+p.c)),bottom=y(Math.min(+p.o,+p.c));return `<g class="candle ${up?'up':'down'}"><line x1="${cx}" y1="${y(p.h)}" x2="${cx}" y2="${y(p.l)}"/><rect x="${cx-w/2}" y="${top}" width="${w}" height="${Math.max(1,bottom-top)}"/></g>`}).join('');
+    }else{
+      const ma=(n)=>pts.map((p,i)=>{if(i<n-1)return null;return pts.slice(i-n+1,i+1).reduce((s,z)=>s+Number(z.c),0)/n}),lines=[5,10,20,30,60].map((n,i)=>{const vals=ma(n),d=vals.map((v,j)=>v==null?'':`${j?'L':'M'}${px(j).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');return d?`<path class="ma ma${n}" d="${d}"/>`:''}).join('');
+      svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/>'+pts.map((p,i)=>{const up=+p.c>=+p.o,cx=px(i),w=Math.max(2,360/pts.length*.58),top=y(Math.max(+p.o,+p.c)),bottom=y(Math.min(+p.o,+p.c));return `<g class="candle ${up?'up':'down'}"><line x1="${cx}" y1="${y(p.h)}" x2="${cx}" y2="${y(p.l)}"/><rect x="${cx-w/2}" y="${top}" width="${w}" height="${Math.max(1,bottom-top)}"/></g>`}).join('')+lines;
+      const volumes=pts.map(p=>+p.v||0),vmax=Math.max(...volumes,1),bars=trade.querySelector('.volume-bars');if(bars){bars.style.display='flex';bars.innerHTML=volumes.map(v=>`<i style="height:${Math.max(2,v/vmax*42).toFixed(1)}px"></i>`).join('')}
+      const maVol=(n)=>volumes.length>=n?volumes.slice(-n).reduce((s,v)=>s+v,0)/n:0,footer=trade.querySelector('.hw-chart-footer');if(footer)footer.textContent=`成交量 ${(volumes.at(-1)/10000).toFixed(2)}万手　MA5 ${(maVol(5)/10000).toFixed(2)}万手　MA10 ${(maVol(10)/10000).toFixed(2)}万手`;
+      let legend=trade.querySelector('.ma-legend');if(!legend){legend=document.createElement('div');legend.className='ma-legend';svg.parentElement.insertBefore(legend,svg)}legend.innerHTML=`<span class="ma5">MA5:${maVol(5)?ma(5).at(-1).toFixed(2):'—'}</span><span class="ma10">MA10:${ma(10).at(-1)?.toFixed(2)||'—'}</span><span class="ma20">MA20:${ma(20).at(-1)?.toFixed(2)||'—'}</span><span class="ma30">MA30:${ma(30).at(-1)?.toFixed(2)||'—'}</span><span class="ma60">MA60:${ma(60).at(-1)?.toFixed(2)||'—'}</span>`;
+    }
     let yc=trade.querySelector('.hw-chart-y');if(!yc){yc=document.createElement('div');yc.className='hw-chart-y';svg.parentElement.appendChild(yc)}yc.innerHTML=`<span>${high.toFixed(2)}</span><span>${((high+low)/2).toFixed(2)}</span><span>${low.toFixed(2)}</span>`;
     const fmt=period==='intraday'?(v=>new Date(v).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})):(v=>new Date(v).toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'})),marks=axis?.querySelectorAll('span')||[];[pts[0],pts[Math.floor(pts.length/2)],last].forEach((p,i)=>{if(marks[i])marks[i].textContent=fmt(p.ts)});
     const head=trade.querySelector('#chartLabel'),latest=trade.querySelector('.chart-head b');if(head)head.textContent=`高 ${high.toFixed(2)}　低 ${low.toFixed(2)}`;if(latest)latest.textContent=`最新 ${Number(last.c).toFixed(2)}`;chips(pts);
   }
   async function load(label,button){
     const period=periods[label];tabs.querySelectorAll('[data-period]').forEach(b=>b.classList.toggle('active',b===button));if(banner)banner.textContent=label+'真实数据加载中…';
+    let tools=trade.querySelector('.kline-tools');if(period==='1d'||period==='1w'||period==='1m'){if(!tools){tools=document.createElement('div');tools.className='kline-tools';tools.innerHTML='<button>分时</button><button>五日</button><button class="active">日K</button><button>周K</button><button>月K</button><button>季K</button><button>年K</button><button>120分</button><button>60分</button><button>30分</button><button>15分</button><button>5分</button><button>1分</button>';trade.querySelector('.market-board')?.before(tools)}}else tools?.remove();
     try{const p=await MarketHistoryService.load(x.code,period,{force:true}),minutes=label==='5min'?5:label==='15min'?15:1,pts=resample((p.points||[]).filter(z=>Number.isFinite(+z.c)),minutes);if(pts.length<2)throw new Error('有效数据不足');paint(pts,period);if(banner){banner.textContent=`${p.provider||'StockToday'} · 真实${label} · ${pts.length} 条`;banner.classList.add('real-inline')}}catch(e){svg.innerHTML='';if(banner){banner.textContent=`${label}真实数据暂不可用 · ${e.message}`;banner.classList.remove('real-inline')}}
   }
   tabs.querySelectorAll('[data-period]').forEach(old=>{const button=old.cloneNode(true);old.replaceWith(button);button.onclick=()=>load(button.dataset.period,button)});
