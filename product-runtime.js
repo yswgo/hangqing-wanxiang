@@ -1,12 +1,12 @@
-// 行情万象 · Unified Product Runtime V87
+// 行情万象 · Unified Product Runtime V88
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
-if(window.__HW_PRODUCT_RUNTIME_V87__)return;
-window.__HW_PRODUCT_RUNTIME_V87__=true;
+if(window.__HW_PRODUCT_RUNTIME_V88__)return;
+window.__HW_PRODUCT_RUNTIME_V88__=true;
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
-const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v87';
-const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v87';
+const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v88';
+const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v88';
 const QUOTE_STALE=2*60e3, QUOTE_EXPIRE=30*60e3, HIST_TTL=6*60*60e3, REFRESH_MS=30000;
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}, write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -110,21 +110,37 @@ function installShare(x){const b=document.querySelector('.trade-detail [data-act
 function installAutoDetailData(x){
   const trade=document.querySelector('.trade-detail');
   if(!trade)return;
-  const refresh=trade.querySelector('[data-runtime-refresh]');
-  if(refresh&&!refresh.dataset.autoStarted){
-    refresh.dataset.autoStarted='1';
-    setTimeout(()=>refresh.click(),0);
-  }
+  const refresh=trade.querySelector('[data-runtime-refresh]'),history=trade.querySelector('.runtime-history');
+  if(history){history.hidden=true;history.setAttribute('aria-hidden','true');const oldLoad=history.querySelector('[data-hload]');if(oldLoad)oldLoad.disabled=true}
+  if(refresh&&!refresh.dataset.autoStarted){refresh.dataset.autoStarted='1';setTimeout(()=>refresh.click(),0)}
   if(marketOf(x)!=='CN')return;
-  const history=trade.querySelector('.runtime-history');
-  if(history){history.hidden=true;history.setAttribute('aria-hidden','true')}
-  trade.querySelectorAll('#tradePeriods [data-period]').forEach(button=>{
-    const intraday=button.dataset.period==='分时';
-    button.disabled=!intraday;
-    button.classList.toggle('active',intraday);
-    if(!intraday)button.title='该周期真实数据暂未接入';
+  const periods={分时:'intraday',日K:'1d',周K:'1w',月K:'1m'},tabs=trade.querySelector('#tradePeriods');
+  if(!tabs)return;
+  tabs.querySelectorAll('[data-period]').forEach(old=>{
+    const button=old.cloneNode(true);old.replaceWith(button);
+    button.disabled=false;
+    button.onclick=()=>load(button.dataset.period,button);
   });
-  setTimeout(()=>trade.querySelectorAll('.volume-bars,.indicator-tabs,.indicator-panel').forEach(el=>el.style.display='none'),200);
+  async function load(label,button){
+    const period=periods[label];if(!period)return;
+    tabs.querySelectorAll('[data-period]').forEach(b=>b.classList.toggle('active',b===button));
+    const banner=trade.querySelector('.mock-inline'),line=trade.querySelector('#tradeLine'),chartLabel=trade.querySelector('#chartLabel'),latest=trade.querySelector('.chart-head b'),axis=trade.querySelector('.time-axis');
+    if(banner)banner.textContent=label+'真实数据加载中…';
+    try{
+      const p=await MarketHistoryService.load(x.code,period,{force:true}),pts=(p.points||[]).filter(z=>Number.isFinite(+z.c)).slice(-240);
+      if(pts.length<2)throw new Error('有效数据不足');
+      if(line)line.setAttribute('points',pointsPath(pts,360,150).replace(/^M/,'').replace(/L/g,' '));
+      const values=pts.map(z=>+z.c),high=Math.max(...values),low=Math.min(...values),last=pts.at(-1),date=v=>new Date(v).toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'}),time=v=>new Date(v).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+      if(chartLabel)chartLabel.textContent=`高 ${high.toFixed(2)}　低 ${low.toFixed(2)}`;
+      if(latest)latest.textContent=`最新 ${Number(last.c).toFixed(2)}`;
+      if(axis){const marks=axis.querySelectorAll('span'),fmt=period==='intraday'?time:date;[pts[0],pts[Math.floor(pts.length/2)],last].forEach((z,i)=>{if(marks[i])marks[i].textContent=fmt(z.ts)})}
+      let y=trade.querySelector('.hw-chart-y');if(!y){y=document.createElement('div');y.className='hw-chart-y';trade.querySelector('.trade-chart')?.parentElement?.appendChild(y)}
+      if(y)y.innerHTML=`<span>${high.toFixed(2)}</span><span>${((high+low)/2).toFixed(2)}</span><span>${low.toFixed(2)}</span>`;
+      if(banner){banner.textContent=`${p.provider||'StockToday'} · 真实${label} · ${pts.length} 条`;banner.classList.add('real-inline')}
+      trade.querySelectorAll('.volume-bars,.indicator-tabs,.indicator-panel').forEach(el=>el.style.display='none');
+    }catch(e){if(line)line.setAttribute('points','');if(banner){banner.textContent=`${label}真实数据暂不可用 · ${e.message}`;banner.classList.remove('real-inline')}}
+  }
+  const first=tabs.querySelector('[data-period="分时"]');if(first)setTimeout(()=>load('分时',first),0);
 }
 
 // ---------- Deep links ----------
