@@ -63,7 +63,8 @@ async function stockTodayMinutes(code,env){
     const settled=await Promise.allSettled(windows.map(([start,end])=>call('stk_mins',{ts_code:ts,freq:'1min',start_date:`${day} ${start}`,end_date:`${day} ${end}`})));
     const merged=[...probe];
     settled.forEach(result=>{if(result.status==='fulfilled')merged.push(...rowsToPoints(result.value))});
-    points=[...new Map(merged.map(point=>[point.ts,point])).values()].sort((a,b)=>a.ts-b.ts);
+    const continuous=merged.filter(point=>{const time=new Date(point.ts+8*3600000).toISOString().slice(11,19);return(time>='09:30:00'&&time<='11:30:59')||(time>='13:00:00'&&time<='15:00:59')});
+    points=[...new Map(continuous.map(point=>[Math.floor(point.ts/60000),point])).values()].sort((a,b)=>a.ts-b.ts);
     tradeDate=day;
     break;
   }
@@ -90,7 +91,7 @@ async function historyV88(request,env){
   const u=new URL(request.url),code=(u.searchParams.get('code')||'').trim().toUpperCase(),period=String(u.searchParams.get('period')||'intraday').toLowerCase();
   if(code&&marketOf(code)==='CN'&&env.STOCKTODAY_TOKEN){
     try{
-      if(['intraday','minute','mins'].includes(period))return json(await edgeCached('history:STOCKTODAY:v112:'+code+':intraday',QUOTE_TTL,()=>stockTodayMinutes(code,env)),200,env);
+      if(['intraday','minute','mins'].includes(period))return json(await edgeCached('history:STOCKTODAY:v113:'+code+':intraday',QUOTE_TTL,()=>stockTodayMinutes(code,env)),200,env);
       if(['1d','1w','1m'].includes(period))return json(await edgeCached('history:STOCKTODAY:v88:'+code+':'+period,HISTORY_TTL,()=>stockTodayBars(code,period,env)),200,env);
     }catch(e){return json({error:e.message||'history_failed',code,period,provider:'stocktoday'},502,env)}
   }
