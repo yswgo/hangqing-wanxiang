@@ -28,6 +28,8 @@ if (!core.includes("call('stk_mins'")) fail('StockToday minute-series adapter mi
 if (!core.includes("provider='stocktoday_rt_min'") || !core.includes("provider='stocktoday_stk_mins'")) {
   fail('StockToday minute provider labels missing');
 }
+if (!core.includes('stockTodayBars(code,period,env)')) fail('StockToday K-line adapter missing');
+for (const period of ['intraday','1d','1w','1m']) if (!core.includes("'" + period + "'")) fail('missing CN history period ' + period);
 
 if (/Mock/i.test(worker.replace(/isMock/g,''))) fail('V82 production wrapper must not manufacture Mock data');
 
