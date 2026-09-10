@@ -1,12 +1,12 @@
-// 行情万象 · Unified Product Runtime V86
+// 行情万象 · Unified Product Runtime V87
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
-if(window.__HW_PRODUCT_RUNTIME_V86__)return;
-window.__HW_PRODUCT_RUNTIME_V86__=true;
+if(window.__HW_PRODUCT_RUNTIME_V87__)return;
+window.__HW_PRODUCT_RUNTIME_V87__=true;
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
-const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v86';
-const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v86';
+const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v87';
+const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v87';
 const QUOTE_STALE=2*60e3, QUOTE_EXPIRE=30*60e3, HIST_TTL=6*60*60e3, REFRESH_MS=30000;
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}, write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -107,13 +107,33 @@ function installDetail(x){if(x?.type!=='股票')return;const trade=document.quer
 function installAlertEditor(x){const trade=document.querySelector('.trade-detail'),actions=trade?.querySelector('.detail-actions');trade?.querySelector('.alert-editor')?.remove();if(!trade||!actions)return;let r=PriceAlertService.get(x.name)||{mode:'pct',value:3};actions.insertAdjacentHTML('beforebegin',`<div class="alert-editor"><div class="section-head"><b>价格提醒</b><span>本机规则</span></div><div class="alert-mode">${[['pct','涨跌幅'],['above','价格高于'],['below','价格低于']].map(([k,l])=>`<button data-am="${k}" class="${r.mode===k?'active':''}">${l}</button>`).join('')}</div><div class="alert-value"><button data-minus>−</button><strong data-av>${r.value}</strong><button data-plus>＋</button><em>${r.mode==='pct'?'%':''}</em></div><small>当前仅本机判断；系统推送需要后端通知服务。</small></div>`);const ed=trade.querySelector('.alert-editor'),save=()=>PriceAlertService.set(x.name,r),paint=()=>{ed.querySelector('[data-av]').textContent=r.value;ed.querySelector('em').textContent=r.mode==='pct'?'%':''};ed.querySelectorAll('[data-am]').forEach(b=>b.onclick=()=>{r.mode=b.dataset.am;if(r.mode!=='pct'&&r.value<10)r.value=num(x.price)||100;ed.querySelectorAll('[data-am]').forEach(z=>z.classList.toggle('active',z===b));paint();save()});ed.querySelector('[data-minus]').onclick=()=>{r.value=Math.max(r.mode==='pct'?1:.01,+(r.value-(r.mode==='pct'?1:Math.max(.01,r.value*.01))).toFixed(2));paint();save()};ed.querySelector('[data-plus]').onclick=()=>{r.value=+(r.value+(r.mode==='pct'?1:Math.max(.01,r.value*.01))).toFixed(2);paint();save()};const alert=trade.querySelector('[data-action="alert"]');if(alert){alert.textContent=PriceAlertService.get(x.name)?'✓ 已提醒':'提醒';alert.onclick=()=>{PriceAlertService.get(x.name)?PriceAlertService.remove(x.name):save();alert.textContent=PriceAlertService.get(x.name)?'✓ 已提醒':'提醒'}}}
 function installShare(x){const b=document.querySelector('.trade-detail [data-action="share"]');if(!b)return;b.onclick=async()=>{const text=`${x.name} ${x.code} ${x.price} ${pct(x.chg)} · 行情万象`;try{if(navigator.share)await navigator.share({title:`${x.name} · 行情万象`,text,url:location.href});else if(navigator.clipboard)await navigator.clipboard.writeText(text+' '+location.href);b.textContent='✓ 已分享'}catch(e){if(e.name!=='AbortError')b.textContent='分享失败'}}}
 
+function installAutoDetailData(x){
+  const trade=document.querySelector('.trade-detail');
+  if(!trade)return;
+  const refresh=trade.querySelector('[data-runtime-refresh]');
+  if(refresh&&!refresh.dataset.autoStarted){
+    refresh.dataset.autoStarted='1';
+    setTimeout(()=>refresh.click(),0);
+  }
+  if(marketOf(x)!=='CN')return;
+  const history=trade.querySelector('.runtime-history');
+  if(history){history.hidden=true;history.setAttribute('aria-hidden','true')}
+  trade.querySelectorAll('#tradePeriods [data-period]').forEach(button=>{
+    const intraday=button.dataset.period==='分时';
+    button.disabled=!intraday;
+    button.classList.toggle('active',intraday);
+    if(!intraday)button.title='该周期真实数据暂未接入';
+  });
+  setTimeout(()=>trade.querySelectorAll('.volume-bars,.indicator-tabs,.indicator-panel').forEach(el=>el.style.display='none'),200);
+}
+
 // ---------- Deep links ----------
 function setAssetUrl(x){const u=new URL(location.href);u.searchParams.set('asset',x.code);history.replaceState(null,'',u)}function openFromUrl(){const code=new URL(location.href).searchParams.get('asset');if(!code)return;const x=assets.find(a=>a.code===code);if(x&&!$('detailSheet').classList.contains('hidden'))return;if(x)openDetail(x.name)}
 
 // ---------- Render/open wrappers: exactly one each ----------
 const baseRender=renderAll;renderAll=function(){baseRender();R.run()};
 const baseOpen=openDetail;openDetail=function(name){baseOpen(name);const x=assets.find(a=>a.name===name);if(x){setAssetUrl(x);R.runDetail(x)}};
-R.afterRender(bindSearch);R.afterRender(installHome);R.afterRender(installWatch);R.afterRender(installWatchSort);R.afterRender(installData);R.afterRender(installProviderDiagnostics);R.afterDetail(x=>{installDetail(x);paintQuoteIntegrity();repaintDetailPrice()});
+R.afterRender(bindSearch);R.afterRender(installHome);R.afterRender(installWatch);R.afterRender(installWatchSort);R.afterRender(installData);R.afterRender(installProviderDiagnostics);R.afterDetail(x=>{installDetail(x);paintQuoteIntegrity();repaintDetailPrice();installAutoDetailData(x)});
 
 document.addEventListener('marketdata:updated',()=>setTimeout(()=>{paintQuoteIntegrity();repaintDetailPrice()},0));
 document.addEventListener('marketdata:updated',e=>{const t=document.querySelector('[data-refresh-time]');if(t)t.textContent=`最近刷新 ${new Date(e.detail.at).toLocaleTimeString('zh-CN')}`});
