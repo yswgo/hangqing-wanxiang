@@ -1,12 +1,12 @@
-// 行情万象 · Unified Product Runtime V94
+// 行情万象 · Unified Product Runtime V95
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
-if(window.__HW_PRODUCT_RUNTIME_V94__)return;
-window.__HW_PRODUCT_RUNTIME_V94__=true;
+if(window.__HW_PRODUCT_RUNTIME_V95__)return;
+window.__HW_PRODUCT_RUNTIME_V95__=true;
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
-const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v94';
-const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v94';
+const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v95';
+const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v95';
 const QUOTE_STALE=2*60e3, QUOTE_EXPIRE=30*60e3, HIST_TTL=6*60*60e3, REFRESH_MS=30000;
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}, write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -110,7 +110,7 @@ function installShare(x){const b=document.querySelector('.trade-detail [data-act
 function installAutoDetailData(x){
   const trade=document.querySelector('.trade-detail');if(!trade)return;
   trade.querySelector('.runtime-history')?.remove();
-  trade.querySelectorAll('.volume-bars,.indicator-tabs,.indicator-panel').forEach(el=>el.remove());
+  trade.querySelectorAll('.indicator-tabs,.indicator-panel').forEach(el=>el.remove());
   const periods={分时:'intraday','1min':'intraday','5min':'intraday','15min':'intraday',日K:'1d',周K:'1w',月K:'1m'},tabs=trade.querySelector('#tradePeriods'),svg=trade.querySelector('.trade-chart'),axis=trade.querySelector('.time-axis'),banner=trade.querySelector('.mock-inline');
   if(!tabs||!svg)return;
   const escAttr=v=>String(v).replace(/[&<>"']/g,'');
@@ -133,7 +133,8 @@ function installAutoDetailData(x){
       const base=+pts[0].c||+pts[0].c,avg=[];let sum=0,vol=0;pts.forEach(p=>{sum+=+p.c*(+p.v||1);vol+=(+p.v||1);avg.push(sum/vol)});
       const line=pointsPath(pts,360,150).replace(/^M/,'').replace(/L/g,' '),area=`M0,150 ${line} L360,150 Z`,avgLine=avg.map((v,i)=>`${i?'L':'M'}${(i*360/Math.max(1,avg.length-1)).toFixed(1)},${y(v).toFixed(1)}`).join('');
       svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/><path d="'+escAttr(area)+'" class="intraday-area"/><path d="'+escAttr(line)+'" class="intraday-price"/><path d="'+escAttr(avgLine)+'" class="intraday-average"/>';
-      let footer=trade.querySelector('.hw-chart-footer');if(!footer){footer=document.createElement('div');footer.className='hw-chart-footer';svg.parentElement.appendChild(footer)}const totalVol=pts.reduce((s,p)=>s+(+p.v||0),0);footer.textContent=`成交量: ${(totalVol/10000).toFixed(2)}万手　盘后: —`;
+      const volumes=pts.map(p=>+p.v||0),vmax=Math.max(...volumes,1),bars=trade.querySelector('.volume-bars');if(bars){bars.style.display='flex';bars.innerHTML=volumes.map(v=>`<i style="height:${Math.max(2,v/vmax*42).toFixed(1)}px"></i>`).join('')}
+      let footer=trade.querySelector('.hw-chart-footer');if(!footer){footer=document.createElement('div');footer.className='hw-chart-footer';svg.parentElement.appendChild(footer)}const totalVol=volumes.reduce((s,v)=>s+v,0);footer.textContent=`成交量: ${(totalVol/10000).toFixed(2)}万手　盘后: —`;
       let rc=trade.querySelector('.hw-chart-right');if(!rc){rc=document.createElement('div');rc.className='hw-chart-right';svg.parentElement.appendChild(rc)}const rp=v=>((v/base-1)*100),mid=(high+low)/2;rc.innerHTML=`<span>${rp(high).toFixed(2)}%</span><span>${rp(high-(high-mid)/2).toFixed(2)}%</span><span>${rp(mid).toFixed(2)}%</span><span>${rp(low+(mid-low)/2).toFixed(2)}%</span><span>${rp(low).toFixed(2)}%</span>`;
     }else{
       const ma=(n)=>pts.map((p,i)=>{if(i<n-1)return null;return pts.slice(i-n+1,i+1).reduce((s,z)=>s+Number(z.c),0)/n}),lines=[5,10,20,30,60].map((n,i)=>{const vals=ma(n),d=vals.map((v,j)=>v==null?'':`${j?'L':'M'}${px(j).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');return d?`<path class="ma ma${n}" d="${d}"/>`:''}).join('');
