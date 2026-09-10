@@ -1,12 +1,12 @@
-// 行情万象 · Unified Product Runtime V92
+// 行情万象 · Unified Product Runtime V93
 // Consolidates the former product-v53/v55...v68 layers into one runtime.
 (function(){
 'use strict';
-if(window.__HW_PRODUCT_RUNTIME_V92__)return;
-window.__HW_PRODUCT_RUNTIME_V92__=true;
+if(window.__HW_PRODUCT_RUNTIME_V93__)return;
+window.__HW_PRODUCT_RUNTIME_V93__=true;
 const $=id=>document.getElementById(id), ENDPOINT_KEY='hw-proxy-endpoint-v1', PROVIDER_KEY='hw-data-provider-v1';
-const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v92';
-const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v92';
+const RULE_KEY='hw-alert-rules-v2', TRIGGER_KEY='hw-alert-trigger-history-v1', QUOTE_KEY='hw-quote-cache-v1', HIST_KEY='hw-history-cache-v93';
+const GROUP_KEY='hw-watch-groups-v1', ASSIGN_KEY='hw-watch-group-assign-v1', CAP_KEY='hw-gateway-cap-v93';
 const QUOTE_STALE=2*60e3, QUOTE_EXPIRE=30*60e3, HIST_TTL=6*60*60e3, REFRESH_MS=30000;
 const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?f:v}catch(e){return f}}, write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -128,8 +128,14 @@ function installAutoDetailData(x){
     return [...map.values()].sort((a,b)=>a.ts-b.ts);
   }
   function paint(points,period){
-    const pts=points.slice(period==='intraday'?-240:-80),high=Math.max(...pts.map(p=>+(p.h??p.c))),low=Math.min(...pts.map(p=>+(p.l??p.c))),range=high-low||1,last=pts.at(-1),x=i=>(i+.5)*360/pts.length,y=v=>150-(+v-low)/range*150;
-    svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/>'+(period==='intraday'?`<path d="${escAttr(pointsPath(pts,360,150))}" fill="none" stroke="currentColor" stroke-width="2.5"/>`:pts.map((p,i)=>{const up=+p.c>=+p.o,cx=x(i),w=Math.max(2,360/pts.length*.58),top=y(Math.max(+p.o,+p.c)),bottom=y(Math.min(+p.o,+p.c));return `<g class="candle ${up?'up':'down'}"><line x1="${cx}" y1="${y(p.h)}" x2="${cx}" y2="${y(p.l)}"/><rect x="${cx-w/2}" y="${top}" width="${w}" height="${Math.max(1,bottom-top)}"/></g>`}).join(''));
+    const pts=points.slice(period==='intraday'?-240:-80),high=Math.max(...pts.map(p=>+(p.h??p.c))),low=Math.min(...pts.map(p=>+(p.l??p.c))),range=high-low||1,last=pts.at(-1),px=i=>(i+.5)*360/pts.length,y=v=>150-(+v-low)/range*150;
+    if(period==='intraday'){
+      const base=+pts[0].c||+pts[0].c,avg=[];let sum=0,vol=0;pts.forEach(p=>{sum+=+p.c*(+p.v||1);vol+=(+p.v||1);avg.push(sum/vol)});
+      const line=pointsPath(pts,360,150).replace(/^M/,'').replace(/L/g,' '),area=`M0,150 ${line} L360,150 Z`,avgLine=avg.map((v,i)=>`${i?'L':'M'}${(i*360/Math.max(1,avg.length-1)).toFixed(1)},${y(v).toFixed(1)}`).join('');
+      svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/><path d="'+escAttr(area)+'" class="intraday-area"/><path d="'+escAttr(line)+'" class="intraday-price"/><path d="'+escAttr(avgLine)+'" class="intraday-average"/>';
+      let footer=trade.querySelector('.hw-chart-footer');if(!footer){footer=document.createElement('div');footer.className='hw-chart-footer';svg.parentElement.appendChild(footer)}const totalVol=pts.reduce((s,p)=>s+(+p.v||0),0);footer.textContent=`成交量: ${(totalVol/10000).toFixed(2)}万手　盘后: —`;
+      let rc=trade.querySelector('.hw-chart-right');if(!rc){rc=document.createElement('div');rc.className='hw-chart-right';svg.parentElement.appendChild(rc)}const rp=v=>((v/base-1)*100),mid=(high+low)/2;rc.innerHTML=`<span>${rp(high).toFixed(2)}%</span><span>${rp(high-(high-mid)/2).toFixed(2)}%</span><span>${rp(mid).toFixed(2)}%</span><span>${rp(low+(mid-low)/2).toFixed(2)}%</span><span>${rp(low).toFixed(2)}%</span>`;
+    }else svg.innerHTML='<line x1="0" y1="75" x2="360" y2="75" class="midline"/>'+pts.map((p,i)=>{const up=+p.c>=+p.o,cx=px(i),w=Math.max(2,360/pts.length*.58),top=y(Math.max(+p.o,+p.c)),bottom=y(Math.min(+p.o,+p.c));return `<g class="candle ${up?'up':'down'}"><line x1="${cx}" y1="${y(p.h)}" x2="${cx}" y2="${y(p.l)}"/><rect x="${cx-w/2}" y="${top}" width="${w}" height="${Math.max(1,bottom-top)}"/></g>`}).join('');
     let yc=trade.querySelector('.hw-chart-y');if(!yc){yc=document.createElement('div');yc.className='hw-chart-y';svg.parentElement.appendChild(yc)}yc.innerHTML=`<span>${high.toFixed(2)}</span><span>${((high+low)/2).toFixed(2)}</span><span>${low.toFixed(2)}</span>`;
     const fmt=period==='intraday'?(v=>new Date(v).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})):(v=>new Date(v).toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'})),marks=axis?.querySelectorAll('span')||[];[pts[0],pts[Math.floor(pts.length/2)],last].forEach((p,i)=>{if(marks[i])marks[i].textContent=fmt(p.ts)});
     const head=trade.querySelector('#chartLabel'),latest=trade.querySelector('.chart-head b');if(head)head.textContent=`高 ${high.toFixed(2)}　低 ${low.toFixed(2)}`;if(latest)latest.textContent=`最新 ${Number(last.c).toFixed(2)}`;chips(pts);
