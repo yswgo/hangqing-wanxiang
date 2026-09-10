@@ -58,7 +58,7 @@ async function stockTodayBars(code,period,env){
   if(!r.ok)throw new Error('stocktoday_http_'+r.status);
   if(p?.code&&p.code!==0)throw new Error('stocktoday_'+(p.msg||'api_error'));
   const rows=p?.data?.items||p?.data||[],fields=p?.data?.fields||p?.columns||[];
-  const points=rows.map(row=>{const q=Array.isArray(row)?Object.fromEntries(fields.map((f,i)=>[f,row[i]])):row,date=String(q.trade_date||q.trade_time||'');return{ts:new Date(date.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')+'T00:00:00+08:00').getTime(),o:n(q.open),h:n(q.high),l:n(q.low),c:n(q.close),v:n(q.vol??q.volume)}}).filter(x=>Number.isFinite(x.ts)&&x.c!=null).sort((a,b)=>a.ts-b.ts).slice(-180);
+  const points=rows.map(row=>{const q=Array.isArray(row)?Object.fromEntries(fields.map((f,i)=>[f,row[i]])):row,date=String(q.trade_date||q.trade_time||'');return{ts:new Date(date.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')+'T00:00:00+08:00').getTime(),o:n(q.open),h:n(q.high),l:n(q.low),c:n(q.close),v:n(q.vol??q.volume)}}).filter(x=>Number.isFinite(x.ts)&&x.c!=null).sort((a,b)=>a.ts-b.ts).slice(-500);
   if(!points.length)throw new Error('stocktoday_history_unavailable');
   return{code,period,market:'CN',provider:'stocktoday_'+api,source:'stocktoday',currency:'CNY',isMock:false,points,meta:{schemaVersion:2,count:points.length,fetchedAt:Date.now(),cacheTtlSeconds:HISTORY_TTL}};
 }
